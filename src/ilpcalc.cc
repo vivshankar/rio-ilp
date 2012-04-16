@@ -156,17 +156,18 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
 	for (int j = 0; j < numSrc; j++)
 	{
 	    opnd_t opnd = instr_get_src(inst, j);
-	    UpdateInstrCycle(eflagsCycles, inst, false, instrCycle);
 	    UpdateInstrCycle(regCycles, memCycles, opnd, instrCycle);
 	}
 
 	for (int j = 0; j < numDst; j++)
 	{
 	    opnd_t opnd = instr_get_dst(inst, j);
-	    UpdateInstrCycle(eflagsCycles, inst, true, instrCycle);
 	    UpdateInstrCycle(regCycles, memCycles, opnd, instrCycle);
 	}
 
+	UpdateInstrCycle(eflagsCycles, inst, false, instrCycle);
+	UpdateInstrCycle(eflagsCycles, inst, true, instrCycle);
+	
 	// Update the destination cycles to ensure that the next instruction cannot
 	// start till the updated min cycle
 	for (int j = 0; j < numDst; j++)
@@ -198,13 +199,14 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag, instrlist_t
 	    }
 	}
 
-	numCycles = max((instrCycle + 1), numCycles);
+	instrCycle++;
+	numCycles = max(instrCycle, numCycles);
     }
 
-    if (numInst == 0)
+    if (numInst == 0 || numCycles == 0)
 	return DR_EMIT_DEFAULT;
 
-    float avg = (float) numInst / numCycles;
+    float avg = (float) numInst / (float) numCycles;
     if (isnan(avg))
     {
 	dr_fprintf(STDERR, "ERROR NAN: The average calculated in the basic block will not be used; num instructions = %d, num cycles required = %d\n", numInst, numCycles);
